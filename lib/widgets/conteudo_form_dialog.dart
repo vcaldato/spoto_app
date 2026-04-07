@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../model/lugar.dart';
 
-// Cores centralizadas
 class AppColors {
   static const background = Color(0xFFF0EBE4);
   static const card       = Color(0xFFFAF7F4);
@@ -19,7 +18,6 @@ class AppColors {
 
 class ConteudoFormDialog extends StatefulWidget {
   final Lugar? lugarAtual;
-
   ConteudoFormDialog({Key? key, this.lugarAtual}) : super(key: key);
 
   ConteudoFormDialogState createState() => ConteudoFormDialogState();
@@ -58,13 +56,10 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
 
   Widget _label(String texto) => Padding(
     padding: const EdgeInsets.only(top: 14, bottom: 4),
-    child: Text(
-      texto.toUpperCase(),
-      style: GoogleFonts.inter(
-        fontSize: 10, fontWeight: FontWeight.w700,
-        color: AppColors.muted, letterSpacing: 0.4,
-      ),
-    ),
+    child: Text(texto.toUpperCase(),
+        style: GoogleFonts.inter(
+            fontSize: 10, fontWeight: FontWeight.w700,
+            color: AppColors.muted, letterSpacing: 0.4)),
   );
 
   InputDecoration _inputDecoration(String hint, {Widget? prefix, Widget? suffix}) {
@@ -76,21 +71,17 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
       prefixIcon: prefix,
       suffixIcon: suffix,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.border)),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.border)),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.dark, width: 1.5),
-      ),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.dark, width: 1.5)),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.redAccent),
-      ),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.redAccent)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
     );
   }
@@ -104,7 +95,7 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          // ── FOTO ──────────────────────────────────────────
+          // FOTO
           _label('Foto'),
           GestureDetector(
             onTap: _selecionarFoto,
@@ -120,58 +111,49 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
               ),
               child: _fotoSelecionada
                   ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_circle_outline,
-                            size: 18, color: AppColors.dark),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Foto selecionada',
-                          style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.dark),
-                        ),
-                        const SizedBox(width: 12),
-                        GestureDetector(
-                          onTap: () => setState(() => _fotoSelecionada = false),
-                          child: const Icon(Icons.close,
-                              size: 16, color: AppColors.muted),
-                        ),
-                      ],
-                    )
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle_outline,
+                      size: 18, color: AppColors.dark),
+                  const SizedBox(width: 8),
+                  Text('Foto selecionada',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, fontWeight: FontWeight.w600,
+                          color: AppColors.dark)),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () => setState(() => _fotoSelecionada = false),
+                    child: const Icon(Icons.close,
+                        size: 16, color: AppColors.muted),
+                  ),
+                ],
+              )
                   : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.camera_alt_outlined,
-                            size: 24, color: AppColors.muted),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Câmera ou galeria',
-                          style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.muted),
-                        ),
-                        // TODO: image_picker
-                      ],
-                    ),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.camera_alt_outlined,
+                      size: 24, color: AppColors.muted),
+                  const SizedBox(height: 4),
+                  Text('Câmera ou galeria',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, fontWeight: FontWeight.w500,
+                          color: AppColors.muted)),
+                ],
+              ),
             ),
           ),
 
-          // ── NOME ──────────────────────────────────────────
+          // NOME
           _label('Nome'),
           TextFormField(
             controller: nomeController,
             style: GoogleFonts.inter(fontSize: 13, color: AppColors.dark),
             decoration: _inputDecoration('Nome do lugar'),
-            validator: (valor) {
-              if (valor == null || valor.isEmpty) return 'Informe o nome';
-              return null;
-            },
+            validator: (v) =>
+            (v == null || v.isEmpty) ? 'Informe o nome' : null,
           ),
 
-          // ── DESCRIÇÃO ─────────────────────────────────────
+          // DESCRIÇÃO
           _label('Descrição'),
           TextFormField(
             controller: descController,
@@ -180,19 +162,19 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
             decoration: _inputDecoration('Como foi a visita?'),
           ),
 
-          // ── CATEGORIA ─────────────────────────────────────
+          // CATEGORIA
           _label('Categoria'),
           DropdownButtonFormField<String>(
             value: _categoriaSelecionada,
             style: GoogleFonts.inter(fontSize: 13, color: AppColors.dark),
             decoration: _inputDecoration(''),
-            items: _categorias.map((cat) {
-              return DropdownMenuItem(value: cat, child: Text(cat));
-            }).toList(),
-            onChanged: (valor) => setState(() => _categoriaSelecionada = valor!),
+            items: _categorias
+                .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                .toList(),
+            onChanged: (v) => setState(() => _categoriaSelecionada = v!),
           ),
 
-          // ── DATA ──────────────────────────────────────────
+          // DATA
           _label('Data da visita'),
           TextFormField(
             controller: dataController,
@@ -212,20 +194,17 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
             ),
           ),
 
-          // ── LOCALIZAÇÃO ───────────────────────────────────
+          // LOCALIZAÇÃO
           _label('Localização'),
           TextFormField(
             controller: enderecoController,
             style: GoogleFonts.inter(fontSize: 13, color: AppColors.dark),
-            decoration: _inputDecoration(
-              'Buscar endereço...',
-              prefix: const Icon(Icons.search,
-                  size: 18, color: AppColors.muted),
-            ),
+            decoration: _inputDecoration('Buscar endereço...',
+                prefix: const Icon(Icons.search,
+                    size: 18, color: AppColors.muted)),
           ),
           const SizedBox(height: 8),
 
-          // Botão GPS
           GestureDetector(
             onTap: _obterGps,
             child: Container(
@@ -240,20 +219,16 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
                   const Icon(Icons.my_location,
                       size: 16, color: AppColors.muted),
                   const SizedBox(width: 10),
-                  Text(
-                    'Usar minha localização (GPS)',
-                    style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.dark),
-                  ),
+                  Text('Usar minha localização (GPS)',
+                      style: GoogleFonts.inter(
+                          fontSize: 13, fontWeight: FontWeight.w600,
+                          color: AppColors.dark)),
                   // TODO: geolocator
                 ],
               ),
             ),
           ),
 
-          // Confirmação GPS
           if (_gpsObtido) ...[
             const SizedBox(height: 8),
             Container(
@@ -268,16 +243,13 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
                   const Icon(Icons.check_circle_outline,
                       size: 15, color: AppColors.success),
                   const SizedBox(width: 8),
-                  Text(
-                    'Localização obtida com sucesso',
-                    style: GoogleFonts.inter(
-                        fontSize: 12, color: AppColors.success),
-                  ),
+                  Text('Localização obtida com sucesso',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, color: AppColors.success)),
                 ],
               ),
             ),
           ],
-
         ],
       ),
     );
@@ -289,7 +261,7 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
   }
 
   void _obterGps() {
-    // TODO: geolocator — obter lat/lng e geocoding reverso
+    // TODO: geolocator — lat/lng + geocoding reverso
     setState(() {
       _gpsObtido = true;
       enderecoController.text = 'Localização obtida via GPS';
@@ -305,10 +277,9 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
       initialDate: data,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
-    ).then((dataSelecionada) {
-      if (dataSelecionada != null) {
-        setState(() =>
-            dataController.text = dataFormat.format(dataSelecionada));
+    ).then((d) {
+      if (d != null) {
+        setState(() => dataController.text = dataFormat.format(d));
       }
     });
   }
@@ -316,16 +287,16 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
   bool dadosValidados() => formKey.currentState?.validate() == true;
 
   Lugar get novoLugar => Lugar(
-        id: widget.lugarAtual?.id ?? 0,
-        nome: nomeController.text,
-        descricao: descController.text,
-        categoria: _categoriaSelecionada,
-        data: dataController.text.isEmpty
-            ? null
-            : dataFormat.parse(dataController.text),
-        endereco: enderecoController.text.isEmpty
-            ? null
-            : enderecoController.text,
-        fotoPath: _fotoSelecionada ? 'placeholder' : null,
-      );
+    id:        widget.lugarAtual?.id,
+    nome:      nomeController.text,
+    descricao: descController.text,
+    categoria: _categoriaSelecionada,
+    data: dataController.text.isEmpty
+        ? null
+        : dataFormat.parse(dataController.text),
+    endereco: enderecoController.text.isEmpty
+        ? null
+        : enderecoController.text,
+    fotoPath: _fotoSelecionada ? 'placeholder' : null,
+  );
 }

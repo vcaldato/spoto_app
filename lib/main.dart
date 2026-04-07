@@ -15,7 +15,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Spoto',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2A2420)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2A2420),
+        ),
         useMaterial3: true,
       ),
       home: ListaLugaresPage(),
