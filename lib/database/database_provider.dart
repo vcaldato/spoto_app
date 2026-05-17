@@ -3,10 +3,8 @@ import '../model/lugar.dart';
 
 class DatabaseProvider {
   static const _dbName    = 'spoto.db';
-  static const _dbVersion = 1;
-
+  static const _dbVersion = 2;
   DatabaseProvider._();
-
   static final DatabaseProvider instance = DatabaseProvider._();
 
   Database? _database;
@@ -24,7 +22,6 @@ class DatabaseProvider {
       dbPath,
       version: _dbVersion,
       onCreate:  _onCreate,
-      onUpgrade: _onUpgrade,
     );
   }
 
@@ -37,12 +34,12 @@ class DatabaseProvider {
         ${Lugar.CAMPO_CATEGORIA} TEXT,
         ${Lugar.CAMPO_DATA}      TEXT,
         ${Lugar.CAMPO_FOTO}      TEXT,
-        ${Lugar.CAMPO_ENDERECO}  TEXT
+        ${Lugar.CAMPO_ENDERECO}  TEXT,
+        ${Lugar.CAMPO_LATITUDE}  REAL,
+        ${Lugar.CAMPO_LONGITUDE} REAL
       );
     ''');
   }
-
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {}
 
   Future<void> close() async {
     if (_database != null) await _database!.close();

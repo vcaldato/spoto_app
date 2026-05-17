@@ -39,9 +39,9 @@ class _FiltroPageState extends State<FiltroPage> {
   void _carregarPrefs() async {
     prefs = await SharedPreferences.getInstance();
     setState(() {
-      campoOrdenacao      = prefs.getString(FiltroPage.CHAVE_CAMPO_ORDENACAO)  ?? Lugar.CAMPO_ID;
-      usarOrdemDecrescente = prefs.getBool(FiltroPage.USAR_ORDEM_DECRESCENTE)  ?? false;
-      nomeController.text = prefs.getString(FiltroPage.CHAVE_FILTRO_NOME)      ?? '';
+      campoOrdenacao       = prefs.getString(FiltroPage.CHAVE_CAMPO_ORDENACAO)  ?? Lugar.CAMPO_ID;
+      usarOrdemDecrescente = prefs.getBool(FiltroPage.USAR_ORDEM_DECRESCENTE)   ?? false;
+      nomeController.text  = prefs.getString(FiltroPage.CHAVE_FILTRO_NOME)      ?? '';
     });
   }
 
@@ -63,7 +63,8 @@ class _FiltroPageState extends State<FiltroPage> {
           centerTitle: false,
           title: Text('Filtro e Ordenação',
               style: GoogleFonts.inter(
-                  fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.dark)),
+                  fontSize: 17, fontWeight: FontWeight.w700,
+                  color: AppColors.dark)),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -71,7 +72,8 @@ class _FiltroPageState extends State<FiltroPage> {
                 onPressed: () => _aoVoltar(),
                 child: Text('Aplicar',
                     style: GoogleFonts.inter(
-                        fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.dark)),
+                        fontSize: 13, fontWeight: FontWeight.w700,
+                        color: AppColors.dark)),
               ),
             ),
           ],
@@ -99,11 +101,13 @@ class _FiltroPageState extends State<FiltroPage> {
                         groupValue: campoOrdenacao,
                         onChanged:  _onCampoOrdenacaoChanged,
                         title: Text(entry.value,
-                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.dark)),
+                            style: GoogleFonts.inter(
+                                fontSize: 13, color: AppColors.dark)),
                         activeColor: AppColors.dark,
                         dense: true,
                       ),
-                      if (!ultimo) const Divider(height: 1, color: AppColors.border),
+                      if (!ultimo)
+                        const Divider(height: 1, color: AppColors.border),
                     ],
                   );
                 }).toList(),
@@ -124,7 +128,8 @@ class _FiltroPageState extends State<FiltroPage> {
                 value:     usarOrdemDecrescente,
                 onChanged: _onDecrescenteChanged,
                 title: Text('Ordem decrescente',
-                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.dark)),
+                    style: GoogleFonts.inter(
+                        fontSize: 13, color: AppColors.dark)),
                 activeColor: AppColors.dark,
                 dense: true,
               ),
@@ -140,7 +145,8 @@ class _FiltroPageState extends State<FiltroPage> {
               style: GoogleFonts.inter(fontSize: 13, color: AppColors.dark),
               decoration: InputDecoration(
                 hintText: 'Nome começa com...',
-                hintStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.subtle),
+                hintStyle: GoogleFonts.inter(
+                    fontSize: 13, color: AppColors.subtle),
                 filled: true,
                 fillColor: AppColors.card,
                 border: OutlineInputBorder(
@@ -153,9 +159,11 @@ class _FiltroPageState extends State<FiltroPage> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.dark, width: 1.5),
+                  borderSide:
+                  const BorderSide(color: AppColors.dark, width: 1.5),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 13, vertical: 11),
               ),
             ),
 
@@ -195,7 +203,6 @@ class _FiltroPageState extends State<FiltroPage> {
     setState(() => campoOrdenacao = valor ?? '');
   }
 
-  // Salva a preferência de ordem decrescente
   void _onDecrescenteChanged(bool? valor) {
     prefs.setBool(FiltroPage.USAR_ORDEM_DECRESCENTE, valor == true);
     alterouValores = true;

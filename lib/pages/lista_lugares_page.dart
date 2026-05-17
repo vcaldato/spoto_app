@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import '../dao/lugar_dao.dart';
 import '../model/lugar.dart';
 import '../pages/filtro_page.dart';
+import '../pages/mape_page.dart';
 import '../widgets/conteudo_form_dialog.dart';
 
 class ListaLugaresPage extends StatefulWidget {
@@ -16,10 +18,10 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
   static const ACAO_EDITAR  = 'editar';
   static const ACAO_DELETAR = 'deletar';
 
-  final _lugares = <Lugar>[];
-  final _dao     = LugarDao(); // acesso ao banco via DAO
+  final _lugares  = <Lugar>[];
+  final _dao      = LugarDao();
+  int   _abaAtiva = 0;
 
-  // Cores
   static const _bg     = Color(0xFFF0EBE4);
   static const _card   = Color(0xFFFAF7F4);
   static const _dark   = Color(0xFF2A2420);
@@ -30,7 +32,6 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
   static const _tagTxt = Color(0xFF7A706A);
   static const _subtle = Color(0xFFBBB0A8);
 
-  // Carrega a lista do banco assim que a tela é montada
   @override
   void initState() {
     super.initState();
@@ -51,20 +52,21 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      body: _criarBody(),
+      body: _abaAtiva == 0 ? _criarBodyLista() : MapaPage(lugares: _lugares),
       bottomNavigationBar: _criarTabBar(),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _abaAtiva == 0
+          ? FloatingActionButton(
         onPressed: _abrirForm,
         backgroundColor: _dark,
         foregroundColor: _bg,
         elevation: 4,
-        tooltip: 'Novo Lugar',
         child: const Icon(Icons.add),
-      ),
+      )
+          : null,
     );
   }
 
-  Widget _criarBody() {
+  Widget _criarBodyLista() {
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,7 +154,18 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+
+            lugar.fotoPath != null
+                ? GestureDetector(
+              onTap: () => _abrirFotoTelaCheia(lugar.fotoPath!),
+              child: Image.file(
+                File(lugar.fotoPath!),
+                width: double.infinity,
+                height: 120,
+                fit: BoxFit.cover,
+              ),
+            )
+                : Container(
               height: 72,
               color: _corCategoria(lugar.categoria),
               alignment: Alignment.center,
@@ -161,6 +174,7 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
                       fontSize: 11, fontWeight: FontWeight.w700,
                       letterSpacing: 0.5, color: _muted)),
             ),
+
             Padding(
               padding: const EdgeInsets.fromLTRB(13, 9, 13, 12),
               child: Column(
@@ -172,12 +186,14 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
                         color: _tag, borderRadius: BorderRadius.circular(5)),
                     child: Text(lugar.categoria,
                         style: GoogleFonts.inter(
-                            fontSize: 10, fontWeight: FontWeight.w600, color: _tagTxt)),
+                            fontSize: 10, fontWeight: FontWeight.w600,
+                            color: _tagTxt)),
                   ),
                   const SizedBox(height: 5),
                   Text('${lugar.id} — ${lugar.nome}',
                       style: GoogleFonts.inter(
-                          fontSize: 14, fontWeight: FontWeight.w700, color: _dark)),
+                          fontSize: 14, fontWeight: FontWeight.w700,
+                          color: _dark)),
                   if (lugar.descricao.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(lugar.descricao,
@@ -190,10 +206,54 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
                     Text(lugar.dataFormatada,
                         style: GoogleFonts.inter(fontSize: 11, color: _subtle)),
                   ],
+                  if (lugar.temLocalizacao) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 11, color: _subtle),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            lugar.endereco ?? 'Localização registrada',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(fontSize: 11, color: _subtle),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+  void _abrirFotoTelaCheia(String fotoPath) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            elevation: 0,
+          ),
+          body: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Image.file(
+                  File(fotoPath),
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -222,7 +282,6 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
     ];
   }
 
-  // Confirma antes de excluir — chama o DAO após confirmação
   void _excluir(Lugar lugar) {
     showDialog(
       context: context,
@@ -247,9 +306,8 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
             onPressed: () {
               Navigator.of(context).pop();
               if (lugar.id == null) return;
-              // Exclui do banco e atualiza a lista
-              _dao.excluir(lugar.id!).then((success) {
-                if (success) _atualizarLista();
+              _dao.excluir(lugar.id!).then((ok) {
+                if (ok) _atualizarLista();
               });
             },
             child: Text('Excluir',
@@ -260,14 +318,12 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
     );
   }
 
-  // Abre o filtro e recarrega a lista se houve alteração
   void _abrirFiltro() {
     Navigator.of(context).pushNamed(FiltroPage.ROUTE_NAME).then((alterou) {
       if (alterou == true) _atualizarLista();
     });
   }
 
-  // Abre o formulário para novo lugar ou edição
   void _abrirForm({Lugar? lugarAtual}) {
     final key = GlobalKey<ConteudoFormDialogState>();
     showDialog(
@@ -293,9 +349,8 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
             onPressed: () {
               if (key.currentState != null && key.currentState!.dadosValidados()) {
                 final lugar = key.currentState!.novoLugar;
-                // Salva no banco (INSERT ou UPDATE) e recarrega a lista
-                _dao.salvar(lugar).then((success) {
-                  if (success) _atualizarLista();
+                _dao.salvar(lugar).then((ok) {
+                  if (ok) _atualizarLista();
                 });
                 Navigator.of(context).pop();
               }
@@ -310,10 +365,9 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
 
   void _atualizarLista() async {
     final prefs = await SharedPreferences.getInstance();
-
     final campoOrdenacao      = prefs.getString(FiltroPage.CHAVE_CAMPO_ORDENACAO)  ?? Lugar.CAMPO_ID;
     final usaOrdemDecrescente = prefs.getBool(FiltroPage.USAR_ORDEM_DECRESCENTE)   ?? false;
-    final filtroNome          = prefs.getString(FiltroPage.CHAVE_FILTRO_NOME)       ?? '';
+    final filtroNome          = prefs.getString(FiltroPage.CHAVE_FILTRO_NOME)      ?? '';
 
     final lugares = await _dao.listar(
       filtro:               filtroNome,
@@ -336,16 +390,19 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [_tabItem(0, 'Lista'), _tabItem(1, 'Mapa')],
+        children: [
+          _tabItem(0, 'Lista'),
+          _tabItem(1, 'Mapa'),
+        ],
       ),
     );
   }
 
   Widget _tabItem(int index, String label) {
-    final ativo = index == 0;
+    final ativo = _abaAtiva == index;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () {},
+      onTap: () => setState(() => _abaAtiva = index),
       child: SizedBox(
         width: 80,
         child: Column(
@@ -361,7 +418,8 @@ class _ListaLugaresPageState extends State<ListaLugaresPage> {
               duration: const Duration(milliseconds: 200),
               width:  ativo ? 4 : 0,
               height: ativo ? 4 : 0,
-              decoration: const BoxDecoration(color: _dark, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                  color: _dark, shape: BoxShape.circle),
             ),
           ],
         ),

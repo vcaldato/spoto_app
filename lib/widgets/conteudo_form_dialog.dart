@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../model/lugar.dart';
 
 class AppColors {
@@ -32,9 +36,12 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
   final enderecoController = TextEditingController();
   final dataFormat         = DateFormat('dd/MM/yyyy');
 
-  String _categoriaSelecionada = 'Geral';
-  bool   _fotoSelecionada      = false; // TODO: image_picker
-  bool   _gpsObtido            = false; // TODO: geolocator
+  String  _categoriaSelecionada = 'Geral';
+  String? _fotoPath;            // caminho real da foto no dispositivo
+  bool    _carregandoGps        = false;
+  bool    _gpsObtido            = false;
+  double? _latitude;
+  double? _longitude;
 
   final _categorias = [
     'Geral', 'Restaurante', 'Natureza', 'Praia',
@@ -45,12 +52,16 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
   void initState() {
     super.initState();
     if (widget.lugarAtual != null) {
-      nomeController.text      = widget.lugarAtual!.nome;
-      descController.text      = widget.lugarAtual!.descricao;
-      dataController.text      = widget.lugarAtual!.dataFormatada;
-      enderecoController.text  = widget.lugarAtual!.endereco ?? '';
-      _categoriaSelecionada    = widget.lugarAtual!.categoria;
-      _fotoSelecionada         = widget.lugarAtual!.fotoPath != null;
+      final l = widget.lugarAtual!;
+      nomeController.text     = l.nome;
+      descController.text     = l.descricao;
+      dataController.text     = l.dataFormatada;
+      enderecoController.text = l.endereco ?? '';
+      _categoriaSelecionada   = l.categoria;
+      _fotoPath               = l.fotoPath;
+      _latitude               = l.latitude;
+      _longitude              = l.longitude;
+      _gpsObtido              = l.temLocalizacao;
     }
   }
 
@@ -95,36 +106,40 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          // FOTO
           _label('Foto'),
           GestureDetector(
             onTap: _selecionarFoto,
             child: Container(
-              height: 80,
+              height: _fotoPath != null ? 140 : 80,
               decoration: BoxDecoration(
-                color: _fotoSelecionada ? AppColors.input : AppColors.card,
+                color: _fotoPath != null ? Colors.transparent : AppColors.card,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: _fotoSelecionada ? AppColors.dark : AppColors.border,
-                  width: _fotoSelecionada ? 1.5 : 1,
+                  color: _fotoPath != null ? AppColors.dark : AppColors.border,
+                  width: _fotoPath != null ? 1.5 : 1,
                 ),
               ),
-              child: _fotoSelecionada
-                  ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              clipBehavior: Clip.hardEdge,
+              child: _fotoPath != null
+                  ? Stack(
+                fit: StackFit.expand,
                 children: [
-                  const Icon(Icons.check_circle_outline,
-                      size: 18, color: AppColors.dark),
-                  const SizedBox(width: 8),
-                  Text('Foto selecionada',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, fontWeight: FontWeight.w600,
-                          color: AppColors.dark)),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () => setState(() => _fotoSelecionada = false),
-                    child: const Icon(Icons.close,
-                        size: 16, color: AppColors.muted),
+                  Image.file(File(_fotoPath!), fit: BoxFit.cover),
+                  // Botão X para remover a foto
+                  Positioned(
+                    top: 6, right: 6,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _fotoPath = null),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close,
+                            size: 14, color: Colors.white),
+                      ),
+                    ),
                   ),
                 ],
               )
@@ -143,7 +158,6 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
             ),
           ),
 
-          // NOME
           _label('Nome'),
           TextFormField(
             controller: nomeController,
@@ -153,7 +167,6 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
             (v == null || v.isEmpty) ? 'Informe o nome' : null,
           ),
 
-          // DESCRIÇÃO
           _label('Descrição'),
           TextFormField(
             controller: descController,
@@ -162,7 +175,6 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
             decoration: _inputDecoration('Como foi a visita?'),
           ),
 
-          // CATEGORIA
           _label('Categoria'),
           DropdownButtonFormField<String>(
             value: _categoriaSelecionada,
@@ -174,7 +186,6 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
             onChanged: (v) => setState(() => _categoriaSelecionada = v!),
           ),
 
-          // DATA
           _label('Data da visita'),
           TextFormField(
             controller: dataController,
@@ -194,7 +205,6 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
             ),
           ),
 
-          // LOCALIZAÇÃO
           _label('Localização'),
           TextFormField(
             controller: enderecoController,
@@ -202,11 +212,15 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
             decoration: _inputDecoration('Buscar endereço...',
                 prefix: const Icon(Icons.search,
                     size: 18, color: AppColors.muted)),
+            // Ao digitar o endereço manualmente, busca as coordenadas
+            onChanged: (valor) {
+              if (valor.length > 4) _buscarCoordenadas(valor);
+            },
           ),
           const SizedBox(height: 8),
 
           GestureDetector(
-            onTap: _obterGps,
+            onTap: _carregandoGps ? null : _obterGps,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
               decoration: BoxDecoration(
@@ -216,14 +230,21 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.my_location,
+                  _carregandoGps
+                      ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.my_location,
                       size: 16, color: AppColors.muted),
                   const SizedBox(width: 10),
-                  Text('Usar minha localização (GPS)',
-                      style: GoogleFonts.inter(
-                          fontSize: 13, fontWeight: FontWeight.w600,
-                          color: AppColors.dark)),
-                  // TODO: geolocator
+                  Text(
+                    _carregandoGps
+                        ? 'Obtendo localização...'
+                        : 'Usar minha localização (GPS)',
+                    style: GoogleFonts.inter(
+                        fontSize: 13, fontWeight: FontWeight.w600,
+                        color: AppColors.dark),
+                  ),
                 ],
               ),
             ),
@@ -243,44 +264,161 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
                   const Icon(Icons.check_circle_outline,
                       size: 15, color: AppColors.success),
                   const SizedBox(width: 8),
-                  Text('Localização obtida com sucesso',
+                  Expanded(
+                    child: Text(
+                      enderecoController.text.isNotEmpty
+                          ? enderecoController.text
+                          : 'Localização obtida com sucesso',
                       style: GoogleFonts.inter(
-                          fontSize: 12, color: AppColors.success)),
+                          fontSize: 12, color: AppColors.success),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
+
         ],
       ),
     );
   }
 
   void _selecionarFoto() {
-    // TODO: image_picker — câmera ou galeria
-    setState(() => _fotoSelecionada = true);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.dark),
+              title: Text('Câmera',
+                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.dark)),
+              onTap: () {
+                Navigator.pop(context);
+                _pegarFoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.dark),
+              title: Text('Galeria',
+                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.dark)),
+              onTap: () {
+                Navigator.pop(context);
+                _pegarFoto(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  void _obterGps() {
-    // TODO: geolocator — lat/lng + geocoding reverso
-    setState(() {
-      _gpsObtido = true;
-      enderecoController.text = 'Localização obtida via GPS';
-    });
+  Future<void> _pegarFoto(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source, imageQuality: 80);
+    if (picked != null) {
+      setState(() => _fotoPath = picked.path);
+    }
+  }
+
+  Future<void> _obterGps() async {
+    setState(() => _carregandoGps = true);
+
+    try {
+    final servicoAtivo = await Geolocator.isLocationServiceEnabled();
+      if (!servicoAtivo) {
+        _mostrarErro('Ative o GPS do celular.');
+        return;
+      }
+
+      var permissao = await Geolocator.checkPermission();
+      if (permissao == LocationPermission.denied) {
+        permissao = await Geolocator.requestPermission();
+        if (permissao == LocationPermission.denied) {
+          _mostrarErro('Permissão de localização negada.');
+          return;
+        }
+      }
+      if (permissao == LocationPermission.deniedForever) {
+        _mostrarErro('Permissão bloqueada. Habilite nas configurações.');
+        return;
+      }
+
+      final posicao = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      final placemarks = await placemarkFromCoordinates(
+        posicao.latitude, posicao.longitude,
+      );
+
+      String endereco = '';
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final partes = [
+          if (p.street != null && p.street!.isNotEmpty) p.street,
+          if (p.subLocality != null && p.subLocality!.isNotEmpty) p.subLocality,
+          if (p.locality != null && p.locality!.isNotEmpty) p.locality,
+          if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty)
+            p.administrativeArea,
+        ];
+        endereco = partes.join(', ');
+      }
+
+      setState(() {
+        _latitude               = posicao.latitude;
+        _longitude              = posicao.longitude;
+        _gpsObtido              = true;
+        enderecoController.text = endereco;
+      });
+
+    } catch (e) {
+      _mostrarErro('Erro ao obter localização.');
+    } finally {
+      setState(() => _carregandoGps = false);
+    }
+  }
+
+  Future<void> _buscarCoordenadas(String enderecoTexto) async {
+    try {
+      final locations = await locationFromAddress(enderecoTexto);
+      if (locations.isNotEmpty) {
+        setState(() {
+          _latitude  = locations.first.latitude;
+          _longitude = locations.first.longitude;
+          _gpsObtido = true;
+        });
+      }
+    } catch (_) {
+    }
+  }
+
+  void _mostrarErro(String mensagem) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensagem), backgroundColor: Colors.redAccent),
+    );
   }
 
   void _mostrarCalendario() {
     final texto = dataController.text;
     var data = DateTime.now();
-    if (texto.isNotEmpty) data = dataFormat.parse(texto);
+    if (texto.isNotEmpty) {
+      try { data = dataFormat.parse(texto); } catch (_) {}
+    }
     showDatePicker(
       context: context,
       initialDate: data,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     ).then((d) {
-      if (d != null) {
-        setState(() => dataController.text = dataFormat.format(d));
-      }
+      if (d != null) setState(() => dataController.text = dataFormat.format(d));
     });
   }
 
@@ -294,9 +432,9 @@ class ConteudoFormDialogState extends State<ConteudoFormDialog> {
     data: dataController.text.isEmpty
         ? null
         : dataFormat.parse(dataController.text),
-    endereco: enderecoController.text.isEmpty
-        ? null
-        : enderecoController.text,
-    fotoPath: _fotoSelecionada ? 'placeholder' : null,
+    fotoPath:  _fotoPath,
+    endereco:  enderecoController.text.isEmpty ? null : enderecoController.text,
+    latitude:  _latitude,
+    longitude: _longitude,
   );
 }
